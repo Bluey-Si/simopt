@@ -13,6 +13,75 @@ import numpy as np
 from mrg32k3a.mrg32k3a import MRG32k3a
 from simopt.utils import classproperty
 
+def advance_subsubstream_by(rng, k: int, check: bool = True) -> None:
+    """
+    Jump forward by k subsubstreams using triplet carry + start_fixed_s_ss_sss.
+    - Does NOT modify the base class.
+    - O(1) arithmetic + O(log k) inside start_fixed_s_ss_sss.
+    - If check=True, verifies against looping and prints a warning on mismatch.
+
+    Parameters
+    ----------
+    rng : MRG32k3a instance
+    k   : non-negative integer
+    check : bool, optional
+        If True, compare with looping k times (slow) and print a warning if different.
+    """
+    try:
+        k = int(k)  # Convert numpy.int64, float-without-decimal, etc. to plain int
+    except Exception:
+        raise ValueError(f"k must be an integer-like value, got {type(k)}")
+
+    if k < 0:
+        raise ValueError("k must be a non-negative integer")
+
+    # k == 0 → no change
+    if k == 0:
+        return
+
+    # Fast path for k == 1: reuse existing method
+    if k == 1:
+        rng.advance_subsubstream()
+        return
+
+    # Current (stream, substream, subsubstream)
+    s, ss, sss = rng.s_ss_sss_index
+
+    # Capacities (from your code: subsubstream length = 2**47, substream length = 2**94)
+    SUBSUBS_PER_SUB = 1 << 47
+    SUBS_PER_STREAM = 1 << 47  # because 2**94 / 2**47 = 2**47
+
+    # Compute the target triplet via carry arithmetic
+    total = sss + k
+    ss_new = ss + (total // SUBSUBS_PER_SUB)
+    sss_new = total % SUBSUBS_PER_SUB
+    s_new = s + (ss_new // SUBS_PER_STREAM)
+    ss_new = ss_new % SUBS_PER_STREAM
+
+    if check:
+        # Save original position
+        orig_triplet = rng.s_ss_sss_index.copy()
+
+        # Fast jump
+        rng.start_fixed_s_ss_sss([int(s_new), int(ss_new), int(sss_new)])
+        fast_state = rng.get_current_state()
+        fast_triplet = rng.s_ss_sss_index.copy()
+
+        # Restore and do the slow baseline (looping k times)
+        rng.start_fixed_s_ss_sss(orig_triplet)
+        for _ in range(k):
+            rng.advance_subsubstream()
+        loop_state = rng.get_current_state()
+
+        # Compare and print if mismatch, then restore fast result
+        if loop_state != fast_state:
+            print("WARNING: advance_subsubstream_by mismatch vs loop baseline.")
+        rng.start_fixed_s_ss_sss(fast_triplet)
+    else:
+        # Just perform the fast jump
+        rng.start_fixed_s_ss_sss([int(s_new), int(ss_new), int(sss_new)])
+     
+
 
 def _factor_check(self: Solver | Problem | Model, factor_name: str) -> bool:
     # Check if factor is of permissible data type.
@@ -893,7 +962,7 @@ class Problem(ABC):
         """
         raise NotImplementedError
 
-    def simulate(self, solution: Solution, num_macroreps: int = 1) -> None:
+    def simulate(self, solution: Solution, num_macroreps: int = 1, n_sss: int = 0) -> None:
         """Simulate `m` i.i.d. replications at solution `x`.
 
         Args:
@@ -914,6 +983,10 @@ class Problem(ABC):
             solution.pad_storage(num_macroreps)
         # Set the decision factors of the model.
         self.model.factors.update(solution.decision_factors)
+        # Advance subsubstreams based on n_sss
+        for rng in solution.rng_list:
+            advance_subsubstream_by(rng, n_sss)
+            
         for _ in range(num_macroreps):
             # Generate one replication at x.
             responses, gradients = self.model.replicate(solution.rng_list)

@@ -33,17 +33,17 @@ class Ambulance(Model):
 
     @classproperty
     @override
-    def n_rngs(self) -> int:
+    def n_rngs(cls) -> int:
         return 4
 
     @classproperty
     @override
-    def n_responses(self) -> int:
+    def n_responses(cls) -> int:
         return 1
 
     @classproperty
     @override
-    def specifications(self) -> dict[str, dict]:
+    def specifications(cls) -> dict[str, dict]:
         # In specifications, use NUM_FIXED and NUM_VARIABLE to define default locs.
         return {
             "fixed_base_count": {
@@ -290,47 +290,47 @@ class AmbulanceMinAvgResponse(Problem):
     
     @classproperty
     @override
-    def n_objectives(self) -> int:
+    def n_objectives(cls) -> int:
         return 1
 
     @classproperty
     @override
-    def n_stochastic_constraints(self) -> int:
+    def n_stochastic_constraints(cls) -> int:
         return 0
 
     @classproperty
     @override
-    def minmax(self) -> tuple[int]:
+    def minmax(cls) -> tuple[int]:
         return (-1,)
 
     @classproperty
     @override
-    def constraint_type(self) -> ConstraintType:
+    def constraint_type(cls) -> ConstraintType:
         return ConstraintType.BOX
 
     @classproperty
     @override
-    def variable_type(self) -> VariableType:
+    def variable_type(cls) -> VariableType:
         return VariableType.CONTINUOUS
 
     @classproperty
     @override
-    def gradient_available(self) -> bool:
+    def gradient_available(cls) -> bool:
         return True
     
     @classproperty
     @override
-    def optimal_value(self) -> float | None:
+    def optimal_value(cls) -> float | None:
         return None
 
     @classproperty
     @override
-    def optimal_solution(self) -> tuple | None:
+    def optimal_solution(cls) -> tuple | None:
         return None
 
     @classproperty
     @override
-    def model_default_factors(self) -> dict:
+    def model_default_factors(cls) -> dict:
         return {
             "fixed_base_count": NUM_FIXED,
             "variable_base_count": NUM_VARIABLE,
@@ -340,12 +340,12 @@ class AmbulanceMinAvgResponse(Problem):
 
     @classproperty
     @override
-    def model_decision_factors(self) -> set[str]:
+    def model_decision_factors(cls) -> set[str]:
         return {"variable_locs"}
 
     @classproperty
     @override
-    def specifications(self) -> dict[str, dict]:
+    def specifications(cls) -> dict[str, dict]:
         return {
             "initial_solution": {
                 "description": "initial solution",
@@ -355,7 +355,7 @@ class AmbulanceMinAvgResponse(Problem):
             "budget": {
                 "description": "max # of replications for a solver to take",
                 "datatype": int,
-                "default": 2000,
+                "default": 1000,
                 "isDatafarmable": False,
             },
         }
