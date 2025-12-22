@@ -82,6 +82,8 @@ def create_test(problem_name: str, solver_name: str) -> None:
         "all_post_replicates": myexperiment.all_post_replicates,
         "all_stoch_constraints": myexperiment.all_stoch_constraints,
         "n_postreps_init_opt": myexperiment.n_postreps_init_opt,
+        "x0": myexperiment.x0,
+        "xstar": myexperiment.xstar,
         "x0_postreps": myexperiment.x0_postreps,
         "xstar_postreps": myexperiment.xstar_postreps,
     }
